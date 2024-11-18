@@ -13,14 +13,15 @@ import jakarta.persistence.Table;
 @Table(name = "Users")
 public class User {
 		@Id
-//		@GeneratedValue(strategy = GenerationType.IDENTITY)
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
 	    @Column(name = "user_id")
 	    private Integer userId;
 
 	    public User(Integer userId, String firstname, String lastname, String email, String password,
 				LocalDateTime createdAt, LocalDateTime modifiedAt, boolean isLoggedIn, String contactNo) {
 			super();
-			this.userId = userId;
+
+			this.userId=userId;
 			this.firstname = firstname;
 			this.lastname = lastname;
 			this.email = email;
