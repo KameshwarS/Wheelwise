@@ -8,6 +8,7 @@ public class WheelwiseApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(WheelwiseApplication.class, args);
+
 	}
 
 }

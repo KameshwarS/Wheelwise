@@ -1,5 +1,8 @@
 package com.infosys.Wheelwise.Controller;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.infosys.Wheelwise.Model.User;
@@ -25,24 +28,21 @@ public class LoginController {
         return "Login page..";
     }
 	@PostMapping("/signin")
-	public ResponseEntity<String> signin(@RequestBody User user) {
-	    // Retrieve user by email
-	    Optional<User> optionalUser = userService.findByEmail(user.getEmail());
+	public ResponseEntity<Map<String, String>> signin(@RequestBody User user) {
+		Map<String, String> response = new HashMap<>();
+		Optional<User> optionalUser = userService.findByEmail(user.getEmail());
+		if (optionalUser.isEmpty() || !optionalUser.get().getPassword().equals(user.getPassword())) {
+			response.put("message", "Invalid email or password");
+			return ResponseEntity.badRequest().body(response);
+		}
+		User foundUser = optionalUser.get();
 
-	    // Check if user exists and password is correct
-	    if (optionalUser.isEmpty() || !optionalUser.get().getPassword().equals(user.getPassword())) {
-	        return ResponseEntity.badRequest().body("Invalid email or password");
-	    }
+		foundUser.setLoggedIn(true);  // Set the 'isLoggedIn' field to true
+		userService.registerUser(foundUser);
 
-	    // Get the user object from Optional
-	    User foundUser = optionalUser.get();
+		response.put("message", "Login successful");
+		return ResponseEntity.ok(response);
 
-	    // Set login status and save changes
-	    foundUser.setLoggedIn(true);  // Set the 'isLoggedIn' field to true
-	    userService.registerUser(foundUser);  // Persist the login status
-
-	    // Return the full user details upon successful sign-in
-	    return ResponseEntity.ok("Login successful");
 	}
 
 
