@@ -1,6 +1,7 @@
 package com.infosys.Wheelwise.Model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -15,8 +16,12 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+
+    @JsonIgnore
     @OneToMany(mappedBy = "vehicle", cascade = CascadeType.ALL)
     private List<Image> images=new ArrayList<>();
+
 
     @Column(name = "company_name")
     private String companyName;

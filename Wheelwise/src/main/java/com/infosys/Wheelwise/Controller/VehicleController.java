@@ -5,17 +5,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.infosys.Wheelwise.Model.Image;
 import com.infosys.Wheelwise.Model.Vehicle;
 import com.infosys.Wheelwise.Services.VehicleService;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -24,6 +33,12 @@ import java.util.List;
 @RestController
 
 public class VehicleController {
+
+    @Autowired
+    private ResourceLoader resourceLoader;
+
+    private static final Logger logger = LoggerFactory.getLogger(VehicleController.class);
+
 
     @Autowired
     private VehicleService vehicleService;
@@ -81,17 +96,16 @@ public class VehicleController {
             vehicle.getImages().add(vehicleImage);
         }
 
-
-
         // Save the vehicle and image to the database
         vehicleService.saveVehicle(vehicle);
 
         return ResponseEntity.ok("Vehicle Added");
     }
 
+
     private String saveImageToFile(MultipartFile image) {
         // Set the desired path to store the images
-        String uploadDir = "C:\\Users\\kames\\WheelwiseImageFinal"; // Adjust the path as needed
+        String uploadDir = "src/main/java/com/infosys/Wheelwise/ImageDir"; // Adjust the path as needed
 
         // Create the directory if it doesn't exist
         Path uploadPath = Paths.get(uploadDir);
@@ -117,5 +131,38 @@ public class VehicleController {
             return null;
         }
     }
+    @GetMapping("/images/{imagePath}")
+    public ResponseEntity<byte[]> getImage(@PathVariable String imagePath) {
+        try {
+            byte[] imageData = getImageData(imagePath);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG); // Adjust content type based on image format
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(imageData);
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    private byte[] getImageData(String imagePath) throws IOException {
+        Resource resource = resourceLoader.getResource(imagePath);
+        try {
+            return IOUtils.toByteArray(resource.getInputStream());
+        } catch (FileNotFoundException e) {
+            logger.error("Image not found: {}", imagePath);
+            try {
+                throw new ChangeSetPersister.NotFoundException();
+            } catch (ChangeSetPersister.NotFoundException ex) {
+                throw new RuntimeException(ex);
+            }
+        } catch (IOException e) {
+            logger.error("Error reading image: {}", e.getMessage());
+            throw new RuntimeException("Error fetching image");
+        }
+    }
+
+
+
 
 }
