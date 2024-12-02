@@ -69,6 +69,7 @@ public class VehicleController {
         return ResponseEntity.ok(availableVehicles);
     }
 
+
     @PostMapping("/addVehicle")
     public ResponseEntity<String> createVehicle(@RequestParam("vehicleData") String vehicleData,
                                                 @RequestParam("image") MultipartFile[] images) {
@@ -124,42 +125,80 @@ public class VehicleController {
 
         try {
             Files.write(imagePath, image.getBytes());
-            return imagePath.toString();
+            return imagePath.toString().replace("\\", "/");
+            //return imagePath.toString();
         } catch (IOException e) {
             // Handle exception, e.g., log the error and return an error response
             e.printStackTrace();
             return null;
         }
     }
-    @GetMapping("/images/{imagePath}")
-    public ResponseEntity<byte[]> getImage(@PathVariable String imagePath) {
+
+    @GetMapping("/images")
+    public ResponseEntity<byte[]> getImageByPath(@RequestParam("imagePath") String imagePath) {
         try {
-            byte[] imageData = getImageData(imagePath);
+            logger.info("Received request to fetch image at path: {}", imagePath);
+
+            Path path = Paths.get(imagePath);
+
+            if (!Files.exists(path)) {
+                logger.error("Image not found at path: {}", imagePath);
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] imageData = Files.readAllBytes(path);
+            String contentType = Files.probeContentType(path);
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.IMAGE_JPEG); // Adjust content type based on image format
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            headers.setContentLength(imageData.length);
+
+            logger.info("Successfully retrieved image at path: {}", imagePath);
+
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(imageData);
+
         } catch (IOException e) {
-            return ResponseEntity.notFound().build();
+            logger.error("Error retrieving image at path {}: {}", imagePath, e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
+    @GetMapping("/by-id")
+    public ResponseEntity<Vehicle> getVehicleById(@RequestParam Long id) {
+        Vehicle vehicle = vehicleService.getVehicleById(id);
+        return vehicle != null ? ResponseEntity.ok(vehicle) : ResponseEntity.notFound().build();
+    }
 
-    private byte[] getImageData(String imagePath) throws IOException {
-        Resource resource = resourceLoader.getResource(imagePath);
-        try {
-            return IOUtils.toByteArray(resource.getInputStream());
-        } catch (FileNotFoundException e) {
-            logger.error("Image not found: {}", imagePath);
-            try {
-                throw new ChangeSetPersister.NotFoundException();
-            } catch (ChangeSetPersister.NotFoundException ex) {
-                throw new RuntimeException(ex);
-            }
-        } catch (IOException e) {
-            logger.error("Error reading image: {}", e.getMessage());
-            throw new RuntimeException("Error fetching image");
-        }
+    @GetMapping("/by-type")
+    public ResponseEntity<List<Vehicle>> getVehiclesByType(@RequestParam String type) {
+        List<Vehicle> vehicles = vehicleService.getVehiclesByType(type);
+        return ResponseEntity.ok(vehicles);
+    }
+
+    // API for brand
+    @GetMapping("/by-brand")
+    public ResponseEntity<List<Vehicle>> getVehiclesByCompanyName(@RequestParam String companyName) {
+        List<Vehicle> vehicles = vehicleService.getVehiclesByCompanyName(companyName);
+        return ResponseEntity.ok(vehicles);
+    }
+
+
+    // API for fuel types
+    @GetMapping("/by-fuel")
+    public ResponseEntity<List<Vehicle>> getVehiclesByFuelType(@RequestParam String fuelType) {
+        List<Vehicle> vehicles = vehicleService.getVehiclesByFuelType(fuelType);
+        return ResponseEntity.ok(vehicles);
+    }
+
+    // API for  transmission types
+    @GetMapping("/by-transmission")
+    public ResponseEntity<List<Vehicle>> getVehiclesByTransmissionType(@RequestParam String transmissionType) {
+        List<Vehicle> vehicles = vehicleService.getVehiclesByTransmissionType(transmissionType);
+        return ResponseEntity.ok(vehicles);
     }
 
 
